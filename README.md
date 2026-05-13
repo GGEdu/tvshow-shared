@@ -30,6 +30,36 @@ Dos paquetes en un solo repo, distribuidos vía git URL dependency con tags semv
 - `tvshow_common.repositories.base.BaseRepository` — generic CRUD repository
 - `tvshow_common.repositories.user_repository.UserRepository`
 
+### v0.3.0 — Auth layer with dependency injection
+
+#### Backend
+- `tvshow_common.core.security` — JWT + password hashing with **settings DI**:
+  - `configure(settings)` — call once at startup
+  - `verify_password`, `get_password_hash`, `create_access_token`, `decode_access_token`
+- `tvshow_common.services.auth_service.AuthService` — register/login business logic
+- `tvshow_common.api.auth.create_auth_router(get_db)` — FastAPI router factory
+
+#### Consumer setup
+In `app/main.py`:
+
+```python
+from tvshow_common.core import security as common_security
+from app.core.config import settings
+
+common_security.configure(settings)
+```
+
+In `app/api/v1/auth.py` (replaces the previous file):
+
+```python
+from app.core.database import get_db
+from tvshow_common.api.auth import create_auth_router
+
+router = create_auth_router(get_db)
+```
+
+The settings object must expose `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`.
+
 ---
 
 ## Uso desde un consumer
