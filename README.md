@@ -11,16 +11,24 @@ Dos paquetes en un solo repo, distribuidos vía git URL dependency con tags semv
 
 ---
 
-## Contenido v0.1.0
+## Contenido
 
-### Frontend (`@ggedu/tvshow-ui`)
+### v0.1.0 — Base set
+
+#### Frontend (`@ggedu/tvshow-ui`)
 - 12 UI primitives: `Badge`, `Button`, `Card`, `Dialog`, `EmptyState`, `FlagImg`, `LanguageBadges`, `PosterOverlay`, `ProgressBar`, `SearchInput`, `Skeleton`, `Tabs`
 - Lib utilities: `constants`, `image` (`resolveImageUrl`), `languages` (`getLangMeta`, `normalizeLanguages`), `queryKeys`
 
-### Backend (`tvshow-common`)
+#### Backend (`tvshow-common`)
 - `tvshow_common.core.base.Base` — declarative SQLAlchemy base
 - Modelos: `User`, `UserList`, `ListType`, `Season`
 - Schemas: `Token`, `TokenPayload`, `LoginRequest`, `EpisodeCreate`, `EpisodeRead`, `UserCreate`, `UserRead`, `UserUpdate`
+
+### v0.2.0 — Repository layer
+
+#### Backend
+- `tvshow_common.repositories.base.BaseRepository` — generic CRUD repository
+- `tvshow_common.repositories.user_repository.UserRepository`
 
 ---
 
