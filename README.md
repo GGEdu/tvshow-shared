@@ -114,6 +114,17 @@ import BottomNav from "./components/BottomNav.jsx";
 </ProtectedRoute>
 ```
 
+### v0.6.0 — Domain UI components
+
+#### Frontend
+- `SeriesHero` — hero banner for series detail (uses resolveImageUrl from lib)
+- `EpisodeRow` — single episode row with watched toggle, language flags, optional `scraping` spinner
+- `SeasonAccordion` — collapsible season with episode list, progress bar, optional coverage indicator
+
+Both `EpisodeRow` and `SeasonAccordion` accept an optional `scraping` prop (default `false`). When `false`, scraper-related UI doesn't render — backward-compatible with consumers that don't use the scraper feature.
+
+`SeasonAccordion` conditionally renders `season.stream_coverage_pct` when present.
+
 ---
 
 ## Uso desde un consumer

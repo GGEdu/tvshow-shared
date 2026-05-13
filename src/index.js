@@ -13,6 +13,15 @@ export { default as PosterOverlay } from "./components/ui/PosterOverlay.jsx";
 export { default as Layout } from "./components/Layout.jsx";
 export { default as ProtectedRoute } from "./components/ProtectedRoute.jsx";
 
+// Domain UI components (v0.6.0)
+export { default as SeriesHero } from "./components/SeriesHero.jsx";
+export {
+  default as EpisodeRow,
+  LANG_META,
+  getLangMeta,
+} from "./components/EpisodeRow.jsx";
+export { default as SeasonAccordion } from "./components/SeasonAccordion.jsx";
+
 // Library utilities
 export * from "./lib/constants.js";
 export * from "./lib/image.js";
