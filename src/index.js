@@ -22,6 +22,9 @@ export {
 } from "./components/EpisodeRow.jsx";
 export { default as SeasonAccordion } from "./components/SeasonAccordion.jsx";
 
+// HTTP client (v0.7.0)
+export { api } from "./services/api.js";
+
 // Library utilities
 export * from "./lib/constants.js";
 export * from "./lib/image.js";

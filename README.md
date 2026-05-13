@@ -125,6 +125,23 @@ Both `EpisodeRow` and `SeasonAccordion` accept an optional `scraping` prop (defa
 
 `SeasonAccordion` conditionally renders `season.stream_coverage_pct` when present.
 
+### v0.7.0 — Shared HTTP client
+
+#### Frontend
+- `api` — fetch-based HTTP client with `get`/`post`/`put`/`patch`/`delete`
+  - Reads JWT from `localStorage` and adds `Authorization: Bearer` header
+  - Auto-redirects to `/login` on HTTP 401
+  - Base URL from `VITE_API_URL` env var (defaults to `/api/v1`)
+
+#### Consumer usage
+The consumer's `services/api.js` becomes a thin re-export:
+
+```js
+export { api } from "@ggedu/tvshow-ui";
+```
+
+Each consumer must set `VITE_API_URL` in its env if it needs a different base path.
+
 ---
 
 ## Uso desde un consumer
