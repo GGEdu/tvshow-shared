@@ -9,6 +9,10 @@ export { default as FlagImg } from "./components/ui/FlagImg.jsx";
 export { default as LanguageBadges } from "./components/ui/LanguageBadges.jsx";
 export { default as PosterOverlay } from "./components/ui/PosterOverlay.jsx";
 
+// Layout components (v0.5.0)
+export { default as Layout } from "./components/Layout.jsx";
+export { default as ProtectedRoute } from "./components/ProtectedRoute.jsx";
+
 // Library utilities
 export * from "./lib/constants.js";
 export * from "./lib/image.js";

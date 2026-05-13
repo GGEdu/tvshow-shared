@@ -95,6 +95,25 @@ const services = { api, authService, listsService, seriesService, userService };
 
 Service modules must keep their export names: `api`, `authService`, `listsService`, `seriesService`, `userService`.
 
+### v0.5.0 — Layout + ProtectedRoute
+
+#### Frontend
+- `Layout` — accepts `desktopNav` and `bottomNav` as ReactNode props (nav components differ between consumers)
+- `ProtectedRoute` — uses `useAuth()` internally; redirects to `/login` if not authenticated
+
+#### Consumer usage
+```jsx
+import { Layout, ProtectedRoute } from "@ggedu/tvshow-ui";
+import DesktopNav from "./components/DesktopNav.jsx";
+import BottomNav from "./components/BottomNav.jsx";
+
+<ProtectedRoute>
+  <Layout desktopNav={<DesktopNav />} bottomNav={<BottomNav />}>
+    {children}
+  </Layout>
+</ProtectedRoute>
+```
+
 ---
 
 ## Uso desde un consumer
