@@ -60,6 +60,41 @@ router = create_auth_router(get_db)
 
 The settings object must expose `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`.
 
+### v0.4.0 — Hooks + Contexts with services DI
+
+#### Frontend
+- `ServicesContext` + `ServicesProvider` + `useServices()` — DI for HTTP service clients
+- `AuthContext` + `AuthProvider` (refactored to use `useServices()`)
+- 9 hooks (all read services via `useServices()`):
+  - `useAuth`, `useUser`
+  - `useMyLists`, `useAddToList`, `useUpdateList`, `useRemoveFromList`
+  - `useFollowSeries`, `useListDropdown`
+  - `useSeasonEpisodes`, `useTmdbSync`
+  - `useWatchedBySeriesId`, `useMarkWatched`, `useMarkWatchedBulk`, `useUnmarkWatched`, `useUnmarkWatchedBulk`
+  - `useSeriesWatchingState`
+
+#### Consumer setup
+In `main.jsx`:
+
+```jsx
+import { ServicesProvider, AuthProvider } from "@ggedu/tvshow-ui";
+import { api } from "./services/api.js";
+import { authService } from "./services/auth.js";
+import { listsService } from "./services/lists.js";
+import { seriesService } from "./services/series.js";
+import { userService } from "./services/user.js";
+
+const services = { api, authService, listsService, seriesService, userService };
+
+<ServicesProvider services={services}>
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+</ServicesProvider>
+```
+
+Service modules must keep their export names: `api`, `authService`, `listsService`, `seriesService`, `userService`.
+
 ---
 
 ## Uso desde un consumer
