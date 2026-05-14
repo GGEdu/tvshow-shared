@@ -60,3 +60,15 @@ export {
 } from "./hooks/useWatchedEpisodes.js";
 export { useSeriesWatchingState } from "./hooks/useSeriesWatchingState.js";
 export { useTmdbSync } from "./hooks/useTmdbSync.js";
+
+// Stream admin (v0.9.0)
+export {
+  useOrphanStreams,
+  useReassignStream,
+  useDeleteStream,
+} from "./hooks/useStreamActions.js";
+export { useRetargetTmdb } from "./hooks/useRetargetTmdb.js";
+
+export { default as RetargetTmdbDialog } from "./components/admin/RetargetTmdbDialog.jsx";
+export { default as ReassignStreamDialog } from "./components/admin/ReassignStreamDialog.jsx";
+export { default as OrphanStreamsBanner } from "./components/admin/OrphanStreamsBanner.jsx";

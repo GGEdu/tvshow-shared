@@ -125,6 +125,51 @@ Both `EpisodeRow` and `SeasonAccordion` accept an optional `scraping` prop (defa
 
 `SeasonAccordion` conditionally renders `season.stream_coverage_pct` when present.
 
+### v0.9.0 — Stream admin (retarget no destructivo + reasignar/borrar enlaces)
+
+#### Frontend
+
+Componentes admin que reemplazan los duplicados que vivían en cada consumer
+(`frontend/src/components/admin/`):
+
+- **`RetargetTmdbDialog`** — Cambiar TMDB target de la serie. El nuevo flujo es
+  no destructivo: el backend hace `snapshot → detach → DELETE seasons/episodes
+  → re-sync TMDB → best-effort remap`. Los enlaces que no encuentran (S,E)
+  equivalente quedan huérfanos y aparecen en `OrphanStreamsBanner`.
+- **`ReassignStreamDialog`** — Generaliza el antiguo `MatchDialog` de
+  TelegramTVShow. Llama a `PATCH /streams/{streamId}` con
+  `{ tmdb_id, season_number, episode_number, language, quality }`. Funciona
+  contra ambos backends.
+- **`OrphanStreamsBanner`** — Banner en SeriesDetail que se renderiza solo si
+  hay enlaces sin `episode_id`. Permite reasignar o borrar cada uno.
+
+Hooks compartidos:
+
+- `useOrphanStreams(seriesId)`, `useReassignStream({ seriesId })`,
+  `useDeleteStream({ seriesId })` — vienen de `useStreamActions.js`.
+- `useRetargetTmdb(seriesId)` — `useRetargetTmdb.js`.
+
+#### Requisitos del consumer
+
+`<ServicesProvider services={...}>` debe incluir un nuevo `streamsService`:
+
+```js
+export const streamsService = {
+  reassign: (streamId, body) => api.patch(`/streams/${streamId}`, body),
+  remove:   (streamId)       => api.delete(`/streams/${streamId}`),
+  listOrphans: (seriesId)    => api.get(`/series/${seriesId}/orphan-streams`),
+};
+```
+
+`seriesService` necesita `retargetTmdb(seriesId, newTmdbId)` y `searchTmdb(q, opts)`.
+
+#### Backend (ambas apps)
+
+- Migración Alembic: `episode_id NULL` + `series_id` FK en `episode_streams`.
+- Nuevo router `/streams` con `PATCH` y `DELETE` (admin only).
+- Nuevo endpoint `GET /series/{id}/orphan-streams`.
+- Refactor `retarget_tmdb`: snapshot + detach + best-effort remap en background.
+
 ### v0.8.0 — Episode action slots
 
 #### Frontend
