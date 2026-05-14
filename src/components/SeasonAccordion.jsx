@@ -55,6 +55,11 @@ export default function SeasonAccordion({
   onMarkBulk,
   onUnmarkBulk,
   scraping = false,
+  // Slots opcionales para inyectar UI per-episodio desde el consumer
+  // (p.ej. botón admin "Cambiar TMDB" + MatchDialog colapsable en
+  // TelegramTVShow). Devuelven ReactNode o null.
+  renderEpisodeActions = null,
+  renderEpisodeBelow = null,
 }) {
   const [open, setOpen] = useState(false);
   // pending: { episodeId, ids: number[], mode: "mark" | "unmark" }
@@ -216,6 +221,8 @@ export default function SeasonAccordion({
                   watched={watchedIds.has(ep.id)}
                   onToggle={handleEpisodeToggle}
                   scraping={scraping}
+                  extraActions={renderEpisodeActions ? renderEpisodeActions(ep) : null}
+                  extraBelow={renderEpisodeBelow ? renderEpisodeBelow(ep) : null}
                 />
               ))
             )}

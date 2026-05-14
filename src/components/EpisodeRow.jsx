@@ -68,6 +68,11 @@ export default function EpisodeRow({
   languages,
   seriesId,
   scraping = false,
+  // Admin / per-episode action slots — consumers populate them when relevant
+  // (p.ej. TelegramTVShow inyecta aquí su botón "Cambiar TMDB" + MatchDialog
+  // colapsable). El paquete shared no asume nada sobre el contenido.
+  extraActions = null,
+  extraBelow = null,
 }) {
   const navigate = useNavigate();
 
@@ -85,7 +90,7 @@ export default function EpisodeRow({
 
   return (
     <div className="border-b border-border-subtle last:border-0">
-      <div className="flex items-start gap-3 py-3">
+      <div className="flex items-start gap-3 py-3 relative">
         {episode.still_path && (
           <div className="h-14 w-24 flex-shrink-0 overflow-hidden rounded-lg">
             <img
@@ -124,6 +129,11 @@ export default function EpisodeRow({
               </div>
             )}
           </div>
+
+          {/* Slot opcional para acciones extra (admin-only, etc.).
+              Se renderiza ANTES del toggle para no romper el alineado a la
+              derecha del botón principal. */}
+          {extraActions}
 
           {/* Watched toggle / scraping spinner */}
           {showSpinner ? (
@@ -164,6 +174,8 @@ export default function EpisodeRow({
           )}
         </div>
       </div>
+      {/* Panel expandible debajo de la fila (admin tools, MatchDialog, etc.) */}
+      {extraBelow}
     </div>
   );
 }

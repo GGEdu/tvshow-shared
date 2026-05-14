@@ -125,6 +125,22 @@ Both `EpisodeRow` and `SeasonAccordion` accept an optional `scraping` prop (defa
 
 `SeasonAccordion` conditionally renders `season.stream_coverage_pct` when present.
 
+### v0.8.0 — Episode action slots
+
+#### Frontend
+- `EpisodeRow` añade dos props opcionales:
+  - `extraActions` (ReactNode) — se renderiza junto al toggle "marcar visto"
+  - `extraBelow` (ReactNode) — panel debajo de la fila (admin tools, MatchDialog, etc.)
+- `SeasonAccordion` añade dos render-props opcionales:
+  - `renderEpisodeActions(episode) => ReactNode`
+  - `renderEpisodeBelow(episode) => ReactNode`
+
+Ambos se inyectan en cada `EpisodeRow` interno. Sirven para que cada consumer
+inyecte UI per-episodio sin acoplar la lib (ej. botón "Cambiar TMDB" + diálogo
+de re-matching en TelegramTVShow).
+
+API 100% retro-compatible: sin las props, se renderiza exactamente lo mismo.
+
 ### v0.7.0 — Shared HTTP client
 
 #### Frontend
