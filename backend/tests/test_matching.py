@@ -12,7 +12,11 @@ from tvshow_common.llm.client import LLMClient, LLMError
 from tvshow_common.matching import series_matcher as sm
 from tvshow_common.matching.fuzzy import fuzzy_match_best
 from tvshow_common.matching.series_matcher import MatchOutcome, SeriesMatcher
-from tvshow_common.matching.title_cleaning import candidate_queries, clean_title
+from tvshow_common.matching.title_cleaning import (
+    candidate_queries,
+    clean_title,
+    find_noise_tokens,
+)
 
 
 # ─── title_cleaning ───────────────────────────────────────────────────
@@ -25,6 +29,15 @@ def test_clean_title_strips_live_action_suffix() -> None:
 
 def test_clean_title_keeps_clean_titles() -> None:
     assert clean_title("Naruto Shippuden") == "Naruto Shippuden"
+
+
+def test_find_noise_tokens_detects_live_action() -> None:
+    assert "live action" in find_noise_tokens("Bleach Live Action")
+
+
+def test_find_noise_tokens_empty_for_clean_title() -> None:
+    assert find_noise_tokens("Naruto Shippuden") == frozenset()
+    assert find_noise_tokens("") == frozenset()
 
 
 def test_candidate_queries_dedupes_case_insensitive() -> None:
@@ -168,6 +181,102 @@ async def test_match_short_circuits_llm_on_high_fuzzy(
     assert outcome.target_tmdb_id == 65930
     assert outcome.via == "fuzzy"
     assert outcome.confidence >= 0.85
+    llm_mock.assert_not_awaited()
+
+
+async def test_noise_tokens_force_llm_tier(
+    matcher: SeriesMatcher,
+    mock_llm: LLMClient,
+) -> None:
+    """Source title with 'Live Action' must not auto-apply via fuzzy.
+
+    Regression for the Bleach Live Action ↔ Bleach anime false-positive:
+    token_set_ratio returns 100 because the candidate is a token subset, but
+    the productions are different. The matcher should defer to the LLM.
+    """
+    live_action = {
+        "title": "Bleach Live Action",
+        "titulo": "Bleach Live Action",
+        "original_name": None,
+    }
+    anime_candidates = [
+        {
+            "tmdb_id": 30984,
+            "title": "Bleach",
+            "original_name": "Bleach",
+            "popularity": 50.0,
+        }
+    ]
+    llm_response = {
+        "kind": "spinoff_or_special",
+        "target_tmdb_id": None,
+        "target_season_number": None,
+        "confidence": 0.92,
+        "reasoning": "Live-action film, distinct from the anime.",
+    }
+    with (
+        patch.object(
+            sm, "gather_tmdb_candidates", AsyncMock(return_value=anime_candidates)
+        ),
+        patch.object(
+            mock_llm, "complete_json", AsyncMock(return_value=llm_response)
+        ) as llm_mock,
+    ):
+        outcome = await matcher.match(live_action)
+
+    assert outcome.via == "llm"
+    assert outcome.kind == "spinoff_or_special"
+    llm_mock.assert_awaited_once()
+
+
+async def test_noise_tokens_in_both_sides_still_uses_fuzzy(
+    matcher: SeriesMatcher,
+    mock_llm: LLMClient,
+) -> None:
+    """If both source and candidate carry the noise token, fuzzy is fine."""
+    series = {
+        "title": "Bleach Live Action",
+        "titulo": "Bleach Live Action",
+        "original_name": None,
+    }
+    matching_candidates = [
+        {
+            "tmdb_id": 999999,
+            "title": "Bleach Live Action",
+            "original_name": "Bleach",
+            "popularity": 5.0,
+        }
+    ]
+    with (
+        patch.object(
+            sm, "gather_tmdb_candidates", AsyncMock(return_value=matching_candidates)
+        ),
+        patch.object(mock_llm, "complete_json", AsyncMock()) as llm_mock,
+    ):
+        outcome = await matcher.match(series)
+
+    assert outcome.via == "fuzzy"
+    assert outcome.target_tmdb_id == 999999
+    llm_mock.assert_not_awaited()
+
+
+async def test_clean_titles_still_use_fuzzy(
+    matcher: SeriesMatcher,
+    mock_llm: LLMClient,
+) -> None:
+    """No noise tokens in source → happy path unchanged, fuzzy auto-applies."""
+    series = {"title": "Naruto", "titulo": "Naruto", "original_name": None}
+    candidates = [
+        {"tmdb_id": 46260, "title": "Naruto", "original_name": "Naruto", "popularity": 200.0}
+    ]
+    with (
+        patch.object(sm, "gather_tmdb_candidates", AsyncMock(return_value=candidates)),
+        patch.object(mock_llm, "complete_json", AsyncMock()) as llm_mock,
+    ):
+        outcome = await matcher.match(series)
+
+    assert outcome.via == "fuzzy"
+    assert outcome.target_tmdb_id == 46260
     llm_mock.assert_not_awaited()
 
 

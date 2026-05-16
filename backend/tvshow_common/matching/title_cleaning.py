@@ -23,6 +23,18 @@ _NOISE_TOKENS: frozenset[str] = frozenset(
 )
 
 
+def find_noise_tokens(t: str) -> frozenset[str]:
+    """Return the noise tokens (live action, movie, OVA, …) present in `t`.
+
+    Case-insensitive substring match. Empty result means the title is "clean"
+    from the SeriesMatcher's perspective.
+    """
+    if not t:
+        return frozenset()
+    low = t.lower()
+    return frozenset(token for token in _NOISE_TOKENS if token in low)
+
+
 def clean_title(t: str) -> str:
     """Strip live-action / movie / OVA noise from a title for searching."""
     s = t.strip()

@@ -28,7 +28,10 @@ from tvshow_common.matching.prompts import (
     DEFAULT_SYSTEM_PROMPT,
     build_classify_user_prompt,
 )
-from tvshow_common.matching.title_cleaning import candidate_queries
+from tvshow_common.matching.title_cleaning import (
+    candidate_queries,
+    find_noise_tokens,
+)
 from tvshow_common.matching.tmdb_search import gather_tmdb_candidates
 
 logger = logging.getLogger(__name__)
@@ -127,6 +130,7 @@ class SeriesMatcher:
         if (
             best_fuzz is not None
             and fuzz_score >= self.fuzzy_skip_llm_threshold
+            and not _has_unmatched_noise_tokens(series, best_fuzz)
         ):
             return MatchOutcome(
                 kind="same_series",
@@ -139,6 +143,23 @@ class SeriesMatcher:
                 ),
                 candidates=candidates,
                 via="fuzzy",
+            )
+
+        if (
+            best_fuzz is not None
+            and fuzz_score >= self.fuzzy_skip_llm_threshold
+        ):
+            # Fuzzy was confident but the source title carries noise tokens
+            # (e.g. "Live Action", "Movie") that the candidate lacks — the
+            # token_set_ratio metric ignores those extras, so this is a likely
+            # false positive ("Bleach Live Action" vs "Bleach" anime).
+            # Defer to the LLM tier instead of auto-applying.
+            logger.info(
+                "Fuzzy score %d for series '%s' suppressed — unmatched noise "
+                "tokens vs candidate '%s'; deferring to LLM.",
+                fuzz_score,
+                series.get("titulo") or series.get("title"),
+                best_fuzz.get("title"),
             )
 
         # 4) Tier 2 — LLM
@@ -166,3 +187,30 @@ class SeriesMatcher:
             candidates=candidates,
             via="llm",
         )
+
+
+def _has_unmatched_noise_tokens(
+    series: dict, candidate: dict[str, Any]
+) -> bool:
+    """True if `series` titles contain noise tokens absent from `candidate`.
+
+    rapidfuzz's `token_set_ratio` happily returns 100 when the candidate is a
+    strict subset of the source ("Bleach" ⊂ "Bleach Live Action"). When the
+    extra tokens are domain-significant ("Live Action", "Movie", "OVA"), that
+    100 is misleading — the two refer to different productions. Detect this
+    case so the caller can fall through to the LLM tier.
+    """
+    series_tokens: set[str] = set()
+    for fld in ("titulo", "title", "original_name"):
+        value = series.get(fld)
+        if value:
+            series_tokens |= find_noise_tokens(value)
+    if not series_tokens:
+        return False
+
+    candidate_tokens: set[str] = set()
+    for fld in ("title", "original_name"):
+        value = candidate.get(fld)
+        if value:
+            candidate_tokens |= find_noise_tokens(value)
+    return bool(series_tokens - candidate_tokens)
