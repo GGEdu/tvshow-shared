@@ -105,3 +105,58 @@ class ReconcileDiscardRequest(BaseModel):
     """Body for POST /admin/reconcile/pending/{id}/discard."""
 
     reason: str | None = None
+
+
+# ─── F6-bis B.1: shared schemas for analytics + TMDB search ─────────────
+
+
+class ReconcileReasoningGroup(BaseModel):
+    """One row of the `top_reasonings` aggregation."""
+
+    reasoning: str
+    via: str = "none"  # 'fuzzy' | 'llm' | 'none'
+    n: int
+
+
+class ReconcileAnalyticsResponse(BaseModel):
+    """Response body of `GET /admin/reconcile/analytics`.
+
+    Drives the admin UI's <AnalyticsTab/>:
+      - donut by `via` (fuzzy / llm / none)
+      - histogram by confidence bucket
+      - top-N reasoning groups (clickable to filter pendings table)
+
+    All three sections live under one endpoint so the UI fetches the
+    snapshot in a single round-trip.
+    """
+
+    total_pending: int
+    by_via: dict[str, int]
+    by_confidence: dict[str, int]
+    top_reasonings: list[ReconcileReasoningGroup]
+
+
+class TmdbSearchResult(BaseModel):
+    """One row from `GET /admin/tmdb-search?q=…`.
+
+    Same shape as `gather_tmdb_candidates` normalised output (so the admin
+    UI gets the exact rows the matcher would have fed the LLM). The UI's
+    <TmdbSearchSelector/> renders a poster grid and lets the admin pick
+    one to feed into `POST /admin/reconcile/pending/{id}/accept`.
+    """
+
+    tmdb_id: int
+    title: str | None = None
+    original_name: str | None = None
+    first_air_date: str | None = None
+    overview: str | None = None
+    popularity: float | None = None
+    vote_average: float | None = None
+    origin_country: list[str] = []
+    poster_path: str | None = None
+
+
+class TmdbSearchResponse(BaseModel):
+    query: str
+    total: int
+    results: list[TmdbSearchResult]

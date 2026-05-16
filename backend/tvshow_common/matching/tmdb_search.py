@@ -103,6 +103,10 @@ async def gather_tmdb_candidates(
                     "popularity": r.get("popularity"),
                     "vote_average": r.get("vote_average"),
                     "origin_country": r.get("origin_country") or [],
+                    # F6-bis B.1: surface poster_path so the admin UI's
+                    # <TmdbSearchSelector/> can show thumbnails without
+                    # another TMDB lookup.
+                    "poster_path": r.get("poster_path"),
                 }
     return sorted(
         candidates_by_id.values(),
