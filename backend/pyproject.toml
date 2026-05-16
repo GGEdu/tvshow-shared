@@ -1,6 +1,6 @@
 [project]
 name = "tvshow-common"
-version = "0.10.1"
+version = "0.10.2"
 description = "Shared backend (SQLAlchemy Base, models, schemas, repos, auth, LLM client, series matcher) for AgenticTVShow and TelegramTVShow"
 requires-python = ">=3.11"
 dependencies = [

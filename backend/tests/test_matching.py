@@ -31,6 +31,11 @@ def test_clean_title_keeps_clean_titles() -> None:
     assert clean_title("Naruto Shippuden") == "Naruto Shippuden"
 
 
+def test_clean_title_strips_uppercase_noise_inline() -> None:
+    # Pre-fix `str.replace` was case-sensitive and missed uppercase variants.
+    assert clean_title("Himouto! Umaru-chan OVA 2") == "Himouto! Umaru-chan 2"
+
+
 def test_find_noise_tokens_detects_live_action() -> None:
     assert "live action" in find_noise_tokens("Bleach Live Action")
 
@@ -38,6 +43,42 @@ def test_find_noise_tokens_detects_live_action() -> None:
 def test_find_noise_tokens_empty_for_clean_title() -> None:
     assert find_noise_tokens("Naruto Shippuden") == frozenset()
     assert find_noise_tokens("") == frozenset()
+
+
+def test_candidate_queries_emits_prefix_before_noise_token() -> None:
+    """Inline noise leaves orphan subtitles; the prefix variant rescues TMDB."""
+    series = {"title": "Death Note Live Action 2: The Last Name"}
+    qs = candidate_queries(series)
+    assert "Death Note" in qs
+    # The full cleaned form is also kept (richest query first).
+    assert qs[0] == "Death Note 2: The Last Name"
+
+
+def test_candidate_queries_strips_trailing_year() -> None:
+    series = {"title": "Spriggan (1998)"}
+    qs = candidate_queries(series)
+    assert "Spriggan" in qs
+
+
+def test_candidate_queries_splits_subtitle() -> None:
+    """For "Title: Subtitle" we also emit "Title"."""
+    series = {"title": "Rockman.EXE Movie: Hikari to Yami no Program"}
+    qs = candidate_queries(series)
+    # After noise-strip + subtitle split we should see "Rockman.EXE"
+    assert any(q.startswith("Rockman.EXE") and ":" not in q for q in qs)
+
+
+def test_candidate_queries_keeps_clean_title_unchanged() -> None:
+    """Happy path: a clean title produces a single query, no fallbacks."""
+    series = {"title": "Naruto"}
+    assert candidate_queries(series) == ["Naruto"]
+
+
+def test_candidate_queries_dedupes_across_variants() -> None:
+    """If two variants produce the same string we don't repeat it."""
+    series = {"title": "Bleach Live Action", "titulo": "Bleach"}
+    qs = candidate_queries(series)
+    assert qs == ["Bleach"]
 
 
 def test_candidate_queries_dedupes_case_insensitive() -> None:
