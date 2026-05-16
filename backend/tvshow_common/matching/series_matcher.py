@@ -53,6 +53,11 @@ class MatchOutcome:
     kind: MatchKind
     target_tmdb_id: int | None = None
     target_season_number: int | None = None
+    # v0.11.0 — media_type of the chosen TMDB target. 'tv' (default) for
+    # backward compatibility; 'movie' when the matcher resolved to a
+    # /movie/{id} entry. Persisted as series.tmdb_media_type so future
+    # catalog syncs hit /tv/{id} vs /movie/{id} correctly.
+    target_media_type: str = "tv"
     confidence: float = 0.0
     reasoning: str = ""
     candidates: list[dict[str, Any]] = field(default_factory=list)
@@ -81,6 +86,7 @@ class SeriesMatcher:
         llm_system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         llm_max_tokens: int = 512,
         llm_temperature: float = 0.0,
+        include_movies: bool = False,
     ) -> None:
         self.llm_client = llm_client
         self.tmdb_api_key = tmdb_api_key
@@ -89,9 +95,23 @@ class SeriesMatcher:
         self.llm_system_prompt = llm_system_prompt
         self.llm_max_tokens = llm_max_tokens
         self.llm_temperature = llm_temperature
+        # v0.11.0 — when True, the matcher also hits /search/movie. Useful
+        # for catalogs that mix anime films with TV series (e.g. "Dragon
+        # Ball Z Pelicula 09"). Default False keeps v0.10.x behaviour.
+        self.include_movies = include_movies
 
-    async def match(self, series: dict) -> MatchOutcome:
-        """Run the full cascade. Returns a MatchOutcome (never raises)."""
+    async def match(
+        self, series: dict, *, include_movies: bool | None = None
+    ) -> MatchOutcome:
+        """Run the full cascade. Returns a MatchOutcome (never raises).
+
+        ``include_movies`` overrides the instance default for a single
+        call — useful when the caller knows the row is a movie (e.g. the
+        scraped title contains "pelicula", "movie", "film"…).
+        """
+        effective_include_movies = (
+            include_movies if include_movies is not None else self.include_movies
+        )
         # 1) Candidate queries
         queries = candidate_queries(series)
         if not queries:
@@ -107,6 +127,7 @@ class SeriesMatcher:
                 queries,
                 api_key=self.tmdb_api_key,
                 language=self.tmdb_language,
+                include_movies=effective_include_movies,
             )
         except Exception as exc:  # noqa: BLE001 — degrade gracefully
             logger.warning("TMDB candidate gather failed: %s", exc)
@@ -136,6 +157,9 @@ class SeriesMatcher:
                 kind="same_series",
                 target_tmdb_id=best_fuzz["tmdb_id"],
                 target_season_number=None,
+                # Surface the candidate's media_type so callers can pick
+                # the right TMDB detail endpoint downstream (v0.11.0).
+                target_media_type=best_fuzz.get("media_type") or "tv",
                 confidence=fuzz_score / 100.0,
                 reasoning=(
                     f"rapidfuzz score {fuzz_score} matched on "
@@ -178,10 +202,23 @@ class SeriesMatcher:
                 via="none",
             )
 
+        # Resolve target_media_type — prefer the LLM's explicit choice;
+        # otherwise look it up in the candidate list by tmdb_id; fall back
+        # to "tv" for compatibility with v0.10.x prompts.
+        llm_media_type = decision.get("target_media_type")
+        target_tmdb_id = decision.get("target_tmdb_id")
+        if not llm_media_type and target_tmdb_id is not None:
+            for c in candidates:
+                if c.get("tmdb_id") == target_tmdb_id:
+                    llm_media_type = c.get("media_type")
+                    break
+        target_media_type = llm_media_type if llm_media_type in ("tv", "movie") else "tv"
+
         return MatchOutcome(
             kind=decision.get("kind", "no_confident_match"),
-            target_tmdb_id=decision.get("target_tmdb_id"),
+            target_tmdb_id=target_tmdb_id,
             target_season_number=decision.get("target_season_number"),
+            target_media_type=target_media_type,
             confidence=float(decision.get("confidence", 0.0)),
             reasoning=str(decision.get("reasoning", "")),
             candidates=candidates,

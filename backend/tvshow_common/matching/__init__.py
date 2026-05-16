@@ -11,9 +11,14 @@ ingest pipeline:
 
 from tvshow_common.matching.fuzzy import fuzzy_match_best
 from tvshow_common.matching.series_matcher import MatchKind, MatchOutcome, SeriesMatcher
-from tvshow_common.matching.title_cleaning import candidate_queries, clean_title
+from tvshow_common.matching.title_cleaning import (
+    candidate_queries,
+    clean_title,
+    looks_like_movie,
+)
 from tvshow_common.matching.tmdb_search import (
     TMDB_API_BASE,
+    fetch_tmdb_detail,
     gather_tmdb_candidates,
     tmdb_auth,
 )
@@ -24,8 +29,10 @@ __all__ = [
     "SeriesMatcher",
     "candidate_queries",
     "clean_title",
+    "fetch_tmdb_detail",
     "fuzzy_match_best",
     "gather_tmdb_candidates",
+    "looks_like_movie",
     "tmdb_auth",
     "TMDB_API_BASE",
 ]

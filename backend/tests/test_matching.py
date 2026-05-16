@@ -400,3 +400,156 @@ def test_should_auto_apply_threshold_logic() -> None:
     assert high.should_auto_apply() is True
     assert low.should_auto_apply() is False
     assert no_match.should_auto_apply() is False
+
+
+# ─── v0.11.0 — movies + media_type ────────────────────────────────────
+
+
+def test_looks_like_movie_detects_pelicula_token() -> None:
+    from tvshow_common.matching.title_cleaning import looks_like_movie
+
+    assert looks_like_movie("Dragon Ball Z Pelicula 09") is True
+    assert looks_like_movie("Akira (1988) Movie") is True
+    assert looks_like_movie("Akira", "Akira: La Película") is True
+
+
+def test_looks_like_movie_ignores_clean_titles() -> None:
+    from tvshow_common.matching.title_cleaning import looks_like_movie
+
+    assert looks_like_movie("Naruto") is False
+    assert looks_like_movie("Bleach Live Action") is False  # not a movie token
+    assert looks_like_movie(None, "", None) is False
+
+
+def test_match_outcome_defaults_media_type_to_tv() -> None:
+    """v0.10.x callers that don't set target_media_type still get 'tv'."""
+    o = MatchOutcome(kind="same_series", target_tmdb_id=42)
+    assert o.target_media_type == "tv"
+
+
+@pytest.mark.asyncio
+async def test_match_resolves_media_type_from_llm_decision(
+    matcher: SeriesMatcher, fake_series_row: dict
+) -> None:
+    """LLM returns target_media_type='movie' → outcome reflects it."""
+    candidates = [
+        {
+            "tmdb_id": 12233,
+            "media_type": "movie",
+            "title": "Dragon Ball Z: Bojack Unbound",
+            "original_name": "ドラゴンボールZ 燃えつきろ!!熱戦・烈戦・超激戦",
+            "first_air_date": "1993-07-10",
+            "overview": "",
+            "popularity": 10.0,
+            "origin_country": [],
+        }
+    ]
+    with patch.object(
+        sm, "gather_tmdb_candidates", AsyncMock(return_value=candidates)
+    ), patch.object(
+        matcher.llm_client,
+        "complete_json",
+        AsyncMock(
+            return_value={
+                "kind": "same_series",
+                "target_tmdb_id": 12233,
+                "target_media_type": "movie",
+                "target_season_number": None,
+                "confidence": 0.95,
+                "reasoning": "Direct DBZ movie 9 match",
+            }
+        ),
+    ):
+        outcome = await matcher.match(
+            {"titulo": "Dragon Ball Z Pelicula 09"}, include_movies=True
+        )
+
+    assert outcome.kind == "same_series"
+    assert outcome.target_tmdb_id == 12233
+    assert outcome.target_media_type == "movie"
+
+
+@pytest.mark.asyncio
+async def test_match_falls_back_to_candidate_media_type_when_llm_omits_it(
+    matcher: SeriesMatcher, fake_series_row: dict
+) -> None:
+    """LLM forgot to set target_media_type → matcher looks it up in candidates."""
+    candidates = [
+        {
+            "tmdb_id": 999,
+            "media_type": "movie",
+            "title": "Some Movie",
+            "first_air_date": "2010-01-01",
+            "popularity": 5.0,
+            "origin_country": [],
+        }
+    ]
+    with patch.object(
+        sm, "gather_tmdb_candidates", AsyncMock(return_value=candidates)
+    ), patch.object(
+        matcher.llm_client,
+        "complete_json",
+        AsyncMock(
+            return_value={
+                "kind": "same_series",
+                "target_tmdb_id": 999,
+                # target_media_type omitted on purpose
+                "confidence": 0.9,
+                "reasoning": "test",
+            }
+        ),
+    ):
+        outcome = await matcher.match(fake_series_row, include_movies=True)
+
+    assert outcome.target_media_type == "movie"
+
+
+@pytest.mark.asyncio
+async def test_match_passes_include_movies_to_gather(
+    matcher: SeriesMatcher, fake_series_row: dict
+) -> None:
+    """Per-call ``include_movies=True`` reaches gather_tmdb_candidates."""
+    gather_mock = AsyncMock(return_value=[])
+    with patch.object(sm, "gather_tmdb_candidates", gather_mock):
+        await matcher.match(fake_series_row, include_movies=True)
+    _args, kwargs = gather_mock.call_args
+    assert kwargs["include_movies"] is True
+
+
+def test_normalize_movie_result_maps_release_date_to_first_air_date() -> None:
+    from tvshow_common.matching.tmdb_search import _normalize_movie_result
+
+    raw = {
+        "id": 12233,
+        "title": "Dragon Ball Z: Bojack Unbound",
+        "original_title": "ドラゴンボールZ",
+        "release_date": "1993-07-10",
+        "overview": "...",
+        "popularity": 8.7,
+        "vote_average": 7.5,
+        "poster_path": "/foo.jpg",
+    }
+    out = _normalize_movie_result(raw)
+    assert out["tmdb_id"] == 12233
+    assert out["media_type"] == "movie"
+    assert out["title"] == "Dragon Ball Z: Bojack Unbound"
+    assert out["original_name"] == "ドラゴンボールZ"
+    assert out["first_air_date"] == "1993-07-10"
+    assert out["origin_country"] == []
+    assert out["poster_path"] == "/foo.jpg"
+
+
+def test_normalize_tv_result_carries_media_type_tv() -> None:
+    from tvshow_common.matching.tmdb_search import _normalize_tv_result
+
+    out = _normalize_tv_result(
+        {
+            "id": 31910,
+            "name": "Naruto: Shippuuden",
+            "first_air_date": "2007-02-15",
+            "origin_country": ["JP"],
+            "popularity": 100,
+        }
+    )
+    assert out["media_type"] == "tv"
+    assert out["tmdb_id"] == 31910

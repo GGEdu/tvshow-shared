@@ -25,8 +25,51 @@ _NOISE_TOKENS: frozenset[str] = frozenset(
         "ova",
         "sin censura",
         "uncensored",
+        # v0.11.0 — Spanish-language film markers commonly scraped from
+        # animeonline / animeflv (e.g. "Dragon Ball Z Pelicula 09").
+        # Stripped from the search query so TMDB returns the underlying
+        # franchise; the caller separately enables include_movies based
+        # on `looks_like_movie()` so /search/movie is also queried.
+        "pelicula",
+        "película",
+        "film",
+        "la pelicula",
+        "la película",
     }
 )
+
+
+# Subset of _NOISE_TOKENS that signal "this is a film, search /movie too".
+# "Live Action" / "OVA" / "Sin Censura" are not in here — those are
+# TV-format variants, not movies.
+_MOVIE_TOKENS: frozenset[str] = frozenset(
+    {
+        "movie",
+        "the movie",
+        "pelicula",
+        "película",
+        "la pelicula",
+        "la película",
+        "film",
+    }
+)
+
+
+def looks_like_movie(*titles: str | None) -> bool:
+    """True if any of the given titles contains a movie-format marker.
+
+    Used by the reconciler to decide whether to flip on ``include_movies``
+    for this row's TMDB search. Tolerates None / empty inputs so callers
+    can pass `(series.title, series.titulo, series.original_name)` raw.
+    """
+    for t in titles:
+        if not t:
+            continue
+        low = t.lower()
+        for tok in _MOVIE_TOKENS:
+            if tok in low:
+                return True
+    return False
 
 
 def find_noise_tokens(t: str) -> frozenset[str]:
