@@ -11,9 +11,19 @@ import { useReconcileBulkRun } from "../../hooks/useReconcile.js";
  * Renders the summary returned by the endpoint inline so the admin
  * can immediately see what changed.
  */
+// v0.11.0 — include_movies tri-state. "auto" lets the backend decide
+// per row from title hints (looks_like_movie); "yes"/"no" force it.
+const INCLUDE_MOVIES_OPTIONS = [
+  { value: "auto", label: "Auto (por título)" },
+  { value: "yes", label: "Sí (siempre)" },
+  { value: "no", label: "No (solo TV)" },
+];
+
 export default function ReconcileBulkRunButton() {
   const [limit, setLimit] = useState("50");
   const [dryRun, setDryRun] = useState(true);
+  const [includeMovies, setIncludeMovies] = useState("auto");
+  const [titleMatch, setTitleMatch] = useState("");
   const bulk = useReconcileBulkRun();
 
   function handleRun() {
@@ -21,7 +31,14 @@ export default function ReconcileBulkRunButton() {
     if (parsed !== null && (Number.isNaN(parsed) || parsed < 1)) {
       return;
     }
-    bulk.mutate({ limit: parsed, dry_run: dryRun });
+    const include_movies = includeMovies === "yes" ? true : includeMovies === "no" ? false : null;
+    const title_match = titleMatch.trim() === "" ? null : titleMatch.trim();
+    bulk.mutate({
+      limit: parsed,
+      dry_run: dryRun,
+      include_movies,
+      title_match,
+    });
   }
 
   const report = bulk.data ?? null;
@@ -44,6 +61,30 @@ export default function ReconcileBulkRunButton() {
             onChange={(e) => setLimit(e.target.value)}
             placeholder="all"
             className="w-24 rounded bg-surface-base px-2 py-1 text-xs text-text-primary ring-1 ring-surface-border focus:ring-tvt-yellow focus:outline-none"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="block text-[11px] text-text-muted">Películas TMDB</span>
+          <select
+            value={includeMovies}
+            onChange={(e) => setIncludeMovies(e.target.value)}
+            className="rounded bg-surface-base px-2 py-1 text-xs text-text-primary ring-1 ring-surface-border focus:ring-tvt-yellow focus:outline-none"
+          >
+            {INCLUDE_MOVIES_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1 flex-1 min-w-[12rem]">
+          <span className="block text-[11px] text-text-muted">Title filter (ILIKE, opcional)</span>
+          <input
+            type="text"
+            value={titleMatch}
+            onChange={(e) => setTitleMatch(e.target.value)}
+            placeholder="%pelicula%"
+            className="w-full rounded bg-surface-base px-2 py-1 text-xs text-text-primary ring-1 ring-surface-border focus:ring-tvt-yellow focus:outline-none"
           />
         </label>
         <label className="flex items-center gap-2 text-xs text-text-primary">

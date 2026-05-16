@@ -101,6 +101,19 @@ export default function TmdbSearchSelector({
                   <div className="truncate text-xs text-text-muted">{r.original_name}</div>
                 )}
                 <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                  {/* v0.11.0 — TV vs Movie badge. Helps admin pick the
+                       right TMDB endpoint family (DBZ films live in
+                       /movie, not /tv). */}
+                  {r.media_type === "movie" && (
+                    <span className="rounded bg-pink-500/20 px-1.5 py-0.5 font-medium text-pink-300">
+                      MOVIE
+                    </span>
+                  )}
+                  {r.media_type === "tv" && (
+                    <span className="rounded bg-sky-500/20 px-1.5 py-0.5 font-medium text-sky-300">
+                      TV
+                    </span>
+                  )}
                   <span>tmdb:{r.tmdb_id}</span>
                   {r.first_air_date && <span>· {r.first_air_date.slice(0, 4)}</span>}
                   {typeof r.popularity === "number" && (

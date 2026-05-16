@@ -34,6 +34,14 @@ export default function ReconcileAcceptDialog({ pending, onClose }) {
     return (pending?.series_title ?? "").trim();
   }, [pending?.series_title]);
 
+  // Looked up before the handlers reference it (TDZ guard — the function
+  // expressions below close over `aiCandidate` lexically, so it must be
+  // initialised first or we'd ReferenceError on first click).
+  const aiCandidate = useMemo(() => {
+    if (!proposalTmdbId) return null;
+    return (pending?.candidates ?? []).find((c) => c.tmdb_id === proposalTmdbId);
+  }, [pending?.candidates, proposalTmdbId]);
+
   function handleAcceptAi() {
     if (!proposalTmdbId) return;
     accept.mutate(
@@ -41,6 +49,10 @@ export default function ReconcileAcceptDialog({ pending, onClose }) {
         pendingId: pending.id,
         target_tmdb_id: proposalTmdbId,
         target_season_number: proposal?.target_season_number ?? null,
+        // v0.11.0 — forward target_media_type when the AI proposal carries
+        // one. Falls back to the candidate's media_type if the proposal
+        // predates v0.11.0; backend defaults to 'tv' if still null.
+        target_media_type: proposal?.target_media_type ?? aiCandidate?.media_type ?? null,
         kind: proposal?.kind ?? "same_series",
       },
       { onSuccess: () => onClose?.() }
@@ -53,16 +65,16 @@ export default function ReconcileAcceptDialog({ pending, onClose }) {
       {
         pendingId: pending.id,
         target_tmdb_id: selected.tmdb_id,
+        // v0.11.0 — the selected TMDB row knows its media_type
+        // (tv or movie), so forward it verbatim. Critical for the
+        // poster-sync fix: the backend uses this to hit /tv/{id} vs
+        // /movie/{id} when fetching metadata.
+        target_media_type: selected.media_type ?? null,
         kind: "same_series",
       },
       { onSuccess: () => onClose?.() }
     );
   }
-
-  const aiCandidate = useMemo(() => {
-    if (!proposalTmdbId) return null;
-    return (pending?.candidates ?? []).find((c) => c.tmdb_id === proposalTmdbId);
-  }, [pending?.candidates, proposalTmdbId]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">

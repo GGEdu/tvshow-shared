@@ -52,10 +52,13 @@ export function useReconcileAccept() {
   const { api } = useServices();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ pendingId, target_tmdb_id, target_season_number, kind }) =>
+    // v0.10.1-ui — also forwards `target_media_type` ('tv' | 'movie')
+    // so the backend persists it on series.tmdb_media_type (v0.11.0+).
+    mutationFn: ({ pendingId, target_tmdb_id, target_season_number, target_media_type, kind }) =>
       api.post(`/admin/reconcile/pending/${pendingId}/accept`, {
         target_tmdb_id,
         target_season_number,
+        target_media_type,
         kind,
       }),
     onSuccess: () => {
