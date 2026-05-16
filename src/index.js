@@ -72,3 +72,21 @@ export { useRetargetTmdb } from "./hooks/useRetargetTmdb.js";
 export { default as RetargetTmdbDialog } from "./components/admin/RetargetTmdbDialog.jsx";
 export { default as ReassignStreamDialog } from "./components/admin/ReassignStreamDialog.jsx";
 export { default as OrphanStreamsBanner } from "./components/admin/OrphanStreamsBanner.jsx";
+
+// Reconcile admin (v0.10.0) — analytics + TMDB-search + pending workflow
+export {
+  useReconcilePending,
+  useReconcileAnalytics,
+  useReconcileBulkRun,
+  useReconcileAccept,
+  useReconcileDiscard,
+  useAdminTmdbSearch,
+} from "./hooks/useReconcile.js";
+
+export { default as AdminConsole } from "./components/admin/AdminConsole.jsx";
+export { default as ReconcileTab } from "./components/admin/ReconcileTab.jsx";
+export { default as ReconcileBulkRunButton } from "./components/admin/ReconcileBulkRunButton.jsx";
+export { default as ReconcilePendingTable } from "./components/admin/ReconcilePendingTable.jsx";
+export { default as ReconcileAcceptDialog } from "./components/admin/ReconcileAcceptDialog.jsx";
+export { default as TmdbSearchSelector } from "./components/admin/TmdbSearchSelector.jsx";
+export { default as AnalyticsTab } from "./components/admin/AnalyticsTab.jsx";
