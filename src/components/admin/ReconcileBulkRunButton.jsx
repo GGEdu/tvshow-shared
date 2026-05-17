@@ -11,18 +11,18 @@ import { useReconcileBulkRun } from "../../hooks/useReconcile.js";
  * Renders the summary returned by the endpoint inline so the admin
  * can immediately see what changed.
  */
-// v0.11.0 — include_movies tri-state. "auto" lets the backend decide
-// per row from title hints (looks_like_movie); "yes"/"no" force it.
+// v0.11.0.1 — backend now always queries /search/movie by default.
+// The selector below is just an opt-OUT for TV-only passes; "default"
+// sends `null` so the backend uses its current default (movies on).
 const INCLUDE_MOVIES_OPTIONS = [
-  { value: "auto", label: "Auto (por título)" },
-  { value: "yes", label: "Sí (siempre)" },
-  { value: "no", label: "No (solo TV)" },
+  { value: "default", label: "TV + Películas (default)" },
+  { value: "no", label: "Solo TV (opt-out)" },
 ];
 
 export default function ReconcileBulkRunButton() {
   const [limit, setLimit] = useState("50");
   const [dryRun, setDryRun] = useState(true);
-  const [includeMovies, setIncludeMovies] = useState("auto");
+  const [includeMovies, setIncludeMovies] = useState("default");
   const [titleMatch, setTitleMatch] = useState("");
   const bulk = useReconcileBulkRun();
 
@@ -31,7 +31,9 @@ export default function ReconcileBulkRunButton() {
     if (parsed !== null && (Number.isNaN(parsed) || parsed < 1)) {
       return;
     }
-    const include_movies = includeMovies === "yes" ? true : includeMovies === "no" ? false : null;
+    // null → backend default (which is True since v0.11.0.1)
+    // false → explicit TV-only opt-out
+    const include_movies = includeMovies === "no" ? false : null;
     const title_match = titleMatch.trim() === "" ? null : titleMatch.trim();
     bulk.mutate({
       limit: parsed,
