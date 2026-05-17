@@ -1,30 +1,31 @@
 import { useState } from "react";
 import AnalyticsTab from "./AnalyticsTab.jsx";
+import MaintenanceTab from "./MaintenanceTab.jsx";
 import ReconcileTab from "./ReconcileTab.jsx";
 
 /**
  * v0.10.0 — Shared admin console for both AgenticTV and TelegramTV.
+ * v0.11.2-ui adds the 'maintenance' tab (F8.3) backed by the new
+ * /admin/maintenance/* endpoints. Only AgenticTV mounts it — TelegramTV's
+ * MergeService doesn't exist, so the operations are N/A there.
  *
  * Props:
  *   - features: array of tab keys to show. Default ["reconcile","analytics"].
- *     Recognised keys: "reconcile" | "analytics" | "urls" | "walk".
+ *     Recognised keys: "reconcile" | "analytics" | "urls" | "walk" | "maintenance".
  *     Unknown keys are ignored. Order in the array drives tab order.
  *
  * AgenticTV mounts:
- *   <AdminConsole features={['reconcile','analytics','urls','walk']} />
+ *   <AdminConsole features={['reconcile','analytics','urls','walk','maintenance']} />
  *
  * TelegramTV mounts:
  *   <AdminConsole features={['reconcile','analytics']} />
- *
- * Domain-specific tabs (urls, walk) currently render a "próximamente"
- * placeholder — they'll be implemented in a follow-up sprint once the
- * backend exposes the corresponding endpoints in a stable shape.
  */
 const TAB_LABELS = {
   reconcile: "Series",
   analytics: "Analytics",
   urls: "URLs",
   walk: "Walk",
+  maintenance: "Mantenimiento",
 };
 
 const KNOWN_TABS = new Set(Object.keys(TAB_LABELS));
@@ -70,6 +71,7 @@ export default function AdminConsole({ features = ["reconcile", "analytics"], in
       {active === "analytics" && <AnalyticsTab onSelectReasoning={handleSelectReasoning} />}
       {active === "urls" && <PlaceholderTab label="URL Discovery" />}
       {active === "walk" && <PlaceholderTab label="Walk dashboard" />}
+      {active === "maintenance" && <MaintenanceTab />}
     </div>
   );
 }

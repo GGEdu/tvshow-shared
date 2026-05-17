@@ -90,3 +90,13 @@ export { default as ReconcilePendingTable } from "./components/admin/ReconcilePe
 export { default as ReconcileAcceptDialog } from "./components/admin/ReconcileAcceptDialog.jsx";
 export { default as TmdbSearchSelector } from "./components/admin/TmdbSearchSelector.jsx";
 export { default as AnalyticsTab } from "./components/admin/AnalyticsTab.jsx";
+
+// Maintenance admin (v0.11.2-ui, F8.3) — AgenticTV-only endpoints
+export {
+  useRefitMediaType,
+  useSweepStalePendings,
+  useRebindOrphanStreams,
+  useAuditStreamLanguages,
+  useNormalizeStreamLanguages,
+} from "./hooks/useMaintenance.js";
+export { default as MaintenanceTab } from "./components/admin/MaintenanceTab.jsx";

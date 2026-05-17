@@ -1,6 +1,6 @@
 {
   "name": "@ggedu/tvshow-ui",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "Shared UI primitives + utilities for AgenticTVShow and TelegramTVShow",
   "type": "module",
   "main": "./src/index.js",
